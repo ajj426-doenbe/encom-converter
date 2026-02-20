@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ENCOM 엑셀 일괄 업로드용 PDF 변환기</title>
+    <style>
+        /* 세련된 웹 폰트(Pretendard) 적용 및 기본 여백 초기화 */
+        @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
+        
+        * { 
+            box-sizing: border-box; 
+            margin: 0; 
+            padding: 0; 
+        }
+        
+        body { 
+            font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif; 
+            background-color: #f7f4f1; /* 따뜻한 베이지 배경 */
+            color: #3e2723; 
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        
+        /* 메인 컨테이너 */
+        .container { 
+            background: #ffffff; 
+            width: 100%;
+            max-width: 560px;
+            padding: 40px 40px 50px; 
+            border-radius: 16px; 
+            box-shadow: 0 10px 30px rgba(94, 69, 52, 0.08); 
+            border-top: 6px solid #5d4037; /* 다크 브라운 포인트 라인 */
+        }
+
+        /* 로고 영역 스타일 */
+        .logo-container {
+            text-align: center;
+            margin-bottom: 25px;
+        }
+        
+        .logo-text {
+            font-size: 28px;
+            font-weight: 800;
+            color: #4e342e; /* 깊은 브라운 */
+            letter-spacing: 1px;
+        }
+        
+        .logo-text span {
+            font-size: 16px;
+            font-weight: 500;
+            color: #795548;
+            margin-left: 8px;
+            letter-spacing: 0;
+        }
+        
+        h1 { 
+            color: #3e2723; 
+            font-size: 22px;
+            font-weight: 700;
+            margin-bottom: 12px;
+            text-align: center;
+            letter-spacing: -0.5px;
+        }
+        
+        .subtitle {
+            text-align: center;
+            color: #8d6e63;
+            font-size: 15px;
+            margin-bottom: 35px;
+            line-height: 1.6;
+            word-break: keep-all;
+        }
+        
+        /* 파일 업로드 영역 디자인 */
+        .upload-area { 
+            background-color: #faf8f6;
+            border: 2px dashed #bcaaa4; 
+            padding: 40px 20px; 
+            text-align: center; 
+            border-radius: 12px; 
+            cursor: pointer; 
+            margin-bottom: 25px; 
+            transition: all 0.2s ease; 
+        }
+        
+        .upload-area:hover { 
+            background-color: #f5f0eb; 
+            border-color: #8d6e63; 
+        }
+        
+        .upload-icon {
+            font-size: 48px;
+            margin-bottom: 15px;
+            color: #a1887f;
+        }
+        
+        .upload-text {
+            font-size: 16px;
+            color: #5d4037;
+            font-weight: 500;
+            line-height: 1.5;
+        }
+        
+        #file-input { display: none; }
+        
+        /* 버튼 디자인 */
+        .btn { 
+            background: #5d4037; 
+            color: #fff; 
+            border: none; 
+            padding: 16px 24px; 
+            font-size: 16px; 
+            font-weight: 600;
+            border-radius: 8px; 
+            cursor: pointer; 
+            transition: background 0.3s; 
+            width: 100%;
+            letter-spacing: -0.3px;
+        }
+        
+        .btn:hover { background: #3e2723; }
+        .btn:disabled { background: #d7ccc8; color: #8d6e63; cursor: not-allowed; }
+        
+        /* 상태 알림창 디자인 */
+        #status { 
+            margin-top: 20px; 
+            font-size: 14px;
+            font-weight: 500;
+            text-align: center; 
+            padding: 14px;
+            border-radius: 8px;
+            display: none; 
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="logo-container">
+            <div class="logo-text">바른<span>관세사무소</span></div>
+        </div>
+
+        <h1>ENCOM 엑셀 일괄 업로드 변환기</h1>
+        <p class="subtitle">B/L 및 상업송장(Invoice) PDF를 업로드하면<br>관세 프로그램에 바로 업로드할 수 있는 엑셀 파일로 변환합니다.</p>
+        
+        <form id="upload-form">
+            <div class="upload-area" onclick="document.getElementById('file-input').click()">
+                <div class="upload-icon">📄</div>
+                <p class="upload-text">이곳을 클릭하여 PDF 파일을 선택하거나<br>드래그 앤 드롭 하세요</p>
+                <input type="file" id="file-input" accept="application/pdf" required>
+            </div>
+            <div>
+                <button type="submit" class="btn" id="submit-btn">엑셀로 변환 및 다운로드</button>
+            </div>
+        </form>
+        <div id="status"></div>
+    </div>
+
+    <script>
+        const form = document.getElementById('upload-form');
+        const fileInput = document.getElementById('file-input');
+        const statusDiv = document.getElementById('status');
+        const submitBtn = document.getElementById('submit-btn');
+
+        fileInput.addEventListener('change', function() {
+            if (this.files && this.files.length > 0) {
+                statusDiv.style.display = 'block';
+                statusDiv.innerHTML = `선택된 파일: <span style="color:#5d4037; font-weight:700;">${this.files[0].name}</span>`;
+                statusDiv.style.background = '#f5f0eb';
+                statusDiv.style.color = '#4e342e';
+                statusDiv.style.border = '1px solid #d7ccc8';
+            }
+        });
+
+        form.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            if (!fileInput.files || fileInput.files.length === 0) {
+                alert("PDF 파일을 먼저 선택해주세요.");
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+
+            statusDiv.style.display = 'block';
+            statusDiv.innerHTML = "⏳ 파일을 서버로 전송하고 변환하는 중입니다...";
+            statusDiv.style.background = '#fff3e0';
+            statusDiv.style.color = '#e65100';
+            statusDiv.style.border = '1px solid #ffe0b2';
+            submitBtn.disabled = true;
+
+            try {
+                const response = await fetch('/api/convert', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || "변환 중 오류가 발생했습니다.");
+                }
+
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.style.display = 'none';
+                a.href = url;
+                a.download = 'Converted_Invoice.xlsx';
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                
+                statusDiv.innerHTML = "✅ 변환이 완료되어 엑셀 다운로드가 시작되었습니다!";
+                statusDiv.style.background = '#e8f5e9';
+                statusDiv.style.color = '#2e7d32';
+                statusDiv.style.border = '1px solid #c8e6c9';
+            } catch (error) {
+                statusDiv.innerHTML = `❌ 오류: ${error.message}`;
+                statusDiv.style.background = '#ffebee';
+                statusDiv.style.color = '#c62828';
+                statusDiv.style.border = '1px solid #ffcdd2';
+            } finally {
+                submitBtn.disabled = false;
+            }
+        });
+    </script>
+</body>
+</html>
